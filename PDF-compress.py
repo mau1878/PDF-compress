@@ -20,21 +20,20 @@ def compress_pdf(input_pdf, scale_percentage):
     for page_num in range(len(pdf_document)):
         page = pdf_document.load_page(page_num)
         
-        # Extract the image and compress it
+        # Extract the images and compress them
         img_list = page.get_images(full=True)
         for img_index, img in enumerate(img_list):
             xref = img[0]
             base_image = pdf_document.extract_image(xref)
             img_bytes = base_image["image"]
             
-            # Open the image with PyMuPDF (or pillow could be used here)
-            img_stream = io.BytesIO(img_bytes)
-            img_pix = fitz.Pixmap(fitz.csRGB, fitz.open(img_stream), 0)
+            # Create a Pixmap from the image bytes
+            img_pix = fitz.Pixmap(fitz.csRGB, fitz.open(io.BytesIO(img_bytes)), 0)
             
             # Resize the image based on the scale_percentage
             scaled_pix = img_pix.scale(scale_percentage / 100, scale_percentage / 100)
             
-            # Update the image in the PDF
+            # Replace the image in the PDF
             page.replace_image(xref, scaled_pix)
         
         # Add the updated page to the new writer

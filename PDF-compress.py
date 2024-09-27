@@ -3,8 +3,11 @@ import fitz  # PyMuPDF
 import io
 
 def compress_pdf(input_pdf, scale_percentage):
-    # Load the PDF
-    pdf_document = fitz.open(stream=input_pdf.read(), filetype="pdf")
+    # Ensure the input is handled as a stream
+    input_pdf.seek(0)  # Move to the start of the file stream
+    
+    # Load the PDF from the input stream
+    pdf_document = fitz.open(stream=input_pdf, filetype="pdf")
     
     # Output PDF stream
     output_pdf_stream = io.BytesIO()

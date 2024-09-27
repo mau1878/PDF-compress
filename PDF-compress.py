@@ -12,19 +12,29 @@ def compress_pdf(input_pdf, scale_percentage):
     # Create a new PDF writer object
     writer = fitz.open()
 
-    # Loop through each page in the PDF and resize
+    # Loop through each page in the PDF
     for page_num in range(len(pdf_document)):
         page = pdf_document.load_page(page_num)
         
-        # Resize the page to a smaller size
-        mat = fitz.Matrix(scale_percentage / 100, scale_percentage / 100)  # Scale matrix
-        pix = page.get_pixmap(matrix=mat)  # Get image of the resized page
+        # Extract the image and compress it
+        img_list = page.get_images(full=True)
+        for img_index, img in enumerate(img_list):
+            xref = img[0]
+            base_image = pdf_document.extract_image(xref)
+            img_bytes = base_image["image"]
+            
+            # Open the image with PyMuPDF (pillow is also an option)
+            img_stream = io.BytesIO(img_bytes)
+            img_pix = fitz.Pixmap(fitz.csRGB, fitz.open(img_stream), 0)
+            
+            # Resize the image based on the scale_percentage
+            scaled_pix = img_pix.scale(scale_percentage / 100, scale_percentage / 100)
+            
+            # Update the image in the PDF
+            page.replace_image(xref, scaled_pix)
         
-        # Create a new page in the writer with the size of the resized image
-        new_page = writer.new_page(width=pix.width, height=pix.height)
-        
-        # Insert the image into the new page
-        new_page.insert_image(fitz.Rect(0, 0, pix.width, pix.height), pixmap=pix)
+        # Add the updated page to the new writer
+        writer.insert_pdf(pdf_document, from_page=page_num, to_page=page_num)
     
     # Save the compressed PDF to the output stream
     writer.save(output_pdf_stream)
@@ -40,7 +50,7 @@ uploaded_file = st.file_uploader("Upload a PDF file", type="pdf")
 
 if uploaded_file:
     # Scale input
-    scale = st.slider("Select size reduction percentage", min_value=10, max_value=100, value=50)
+    scale = st.slider("Select image reduction percentage", min_value=10, max_value=100, value=50)
     
     if st.button("Reduce PDF Size"):
         # Compress the PDF

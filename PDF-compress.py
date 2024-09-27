@@ -35,8 +35,8 @@ def compress_pdf(input_pdf, scale_percentage):
             new_width = int(img.width * (scale_percentage / 100))
             new_height = int(img.height * (scale_percentage / 100))
             
-            # Resize the image using Pillow
-            img = img.resize((new_width, new_height), Image.ANTIALIAS)
+            # Resize the image using Pillow with LANCZOS filter
+            img = img.resize((new_width, new_height), Image.LANCZOS)
             
             # Convert back to BytesIO
             img_bytes_io = io.BytesIO()

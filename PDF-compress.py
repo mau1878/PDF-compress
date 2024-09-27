@@ -6,23 +6,27 @@ def compress_pdf(input_pdf, scale_percentage):
     # Load the PDF
     pdf_document = fitz.open(stream=input_pdf.read(), filetype="pdf")
     
-    # Output PDF
+    # Output PDF stream
     output_pdf_stream = io.BytesIO()
     
-    # Write the new PDF to the output stream
-    writer = fitz.Document()
+    # Create a new PDF writer object
+    writer = fitz.open()
 
-    # Loop through each page and compress
+    # Loop through each page in the PDF and resize
     for page_num in range(len(pdf_document)):
         page = pdf_document.load_page(page_num)
-        pix = page.get_pixmap(matrix=fitz.Matrix(scale_percentage / 100, scale_percentage / 100))  # Resize page
-        img_bytes = pix.tobytes(output="png")
         
-        # Create a new page in the writer object from the image
-        img_pdf = fitz.open(stream=img_bytes, filetype="png")
-        writer.insert_pdf(img_pdf)
+        # Resize the page to a smaller size
+        mat = fitz.Matrix(scale_percentage / 100, scale_percentage / 100)  # Scale matrix
+        pix = page.get_pixmap(matrix=mat)  # Get image of the resized page
+        
+        # Create a new page in the writer with the size of the resized image
+        new_page = writer.new_page(width=pix.width, height=pix.height)
+        
+        # Insert the image into the new page
+        new_page.insert_image(fitz.Rect(0, 0, pix.width, pix.height), pixmap=pix)
     
-    # Save the compressed PDF
+    # Save the compressed PDF to the output stream
     writer.save(output_pdf_stream)
     writer.close()
     

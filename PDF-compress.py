@@ -30,13 +30,13 @@ def compress_pdf(input_pdf, scale_percentage):
             # Create a Pixmap directly from the image bytes
             img_pix = fitz.Pixmap(img_bytes)
             
-            # Create a scaling matrix
-            scale_matrix = fitz.Matrix(scale_percentage / 100, scale_percentage / 100)
+            # Calculate new dimensions
+            new_width = int(img_pix.width * (scale_percentage / 100))
+            new_height = int(img_pix.height * (scale_percentage / 100))
             
-            # Scale the pixmap using the matrix to create a new scaled pixmap
-            scaled_pix = fitz.Pixmap(img_pix, img_pix.alpha)  # Retain alpha channel if exists
-            scaled_pix = scaled_pix.resample(scale_matrix)  # Resample the image with the scale matrix
-
+            # Resize the image using the new dimensions
+            scaled_pix = img_pix.resize(new_width, new_height)  # Resize the pixmap
+            
             # Replace the image in the PDF
             page.replace_image(xref, scaled_pix)
         

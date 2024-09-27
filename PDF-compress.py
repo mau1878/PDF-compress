@@ -3,11 +3,12 @@ import fitz  # PyMuPDF
 import io
 
 def compress_pdf(input_pdf, scale_percentage):
-    # Ensure the input is handled as a stream
-    input_pdf.seek(0)  # Move to the start of the file stream
+    # Convert Streamlit UploadedFile to BytesIO
+    input_pdf_stream = io.BytesIO(input_pdf.read())  # Convert to BytesIO
+    input_pdf_stream.seek(0)  # Move to the start of the file stream
     
     # Load the PDF from the input stream
-    pdf_document = fitz.open(stream=input_pdf, filetype="pdf")
+    pdf_document = fitz.open(stream=input_pdf_stream, filetype="pdf")
     
     # Output PDF stream
     output_pdf_stream = io.BytesIO()
@@ -26,7 +27,7 @@ def compress_pdf(input_pdf, scale_percentage):
             base_image = pdf_document.extract_image(xref)
             img_bytes = base_image["image"]
             
-            # Open the image with PyMuPDF (pillow is also an option)
+            # Open the image with PyMuPDF (or pillow could be used here)
             img_stream = io.BytesIO(img_bytes)
             img_pix = fitz.Pixmap(fitz.csRGB, fitz.open(img_stream), 0)
             
@@ -42,6 +43,9 @@ def compress_pdf(input_pdf, scale_percentage):
     # Save the compressed PDF to the output stream
     writer.save(output_pdf_stream)
     writer.close()
+    
+    # Move the output stream to the start
+    output_pdf_stream.seek(0)
     
     return output_pdf_stream
 
@@ -61,4 +65,4 @@ if uploaded_file:
         
         # Create a download link for the compressed PDF
         st.success("PDF size reduced successfully!")
-        st.download_button(label="Download Reduced PDF", data=output_pdf_stream.getvalue(), file_name="reduced_size.pdf", mime="application/pdf")
+        st.download_button(label="Download Reduced PDF", data=output_pdf_stream, file_name="reduced_size.pdf", mime="application/pdf")

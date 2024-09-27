@@ -1,8 +1,3 @@
-import streamlit as st
-import fitz  # PyMuPDF
-import io
-from PIL import Image
-
 def compress_pdf(input_pdf, scale_percentage):
     # Convert Streamlit UploadedFile to BytesIO
     input_pdf_stream = io.BytesIO(input_pdf.read())  # Convert to BytesIO
@@ -43,8 +38,8 @@ def compress_pdf(input_pdf, scale_percentage):
             img.save(img_bytes_io, format='PNG')  # Save as PNG or JPEG
             img_bytes_io.seek(0)  # Move to the start of the BytesIO
             
-            # Replace the image in the PDF
-            page.replace_image(xref, img_bytes_io.getvalue())
+            # Replace the image in the PDF correctly
+            page.replace_image(xref, img_bytes_io.getvalue())  # Correct usage with xref and image bytes
         
         # Add the updated page to the new writer
         writer.insert_pdf(pdf_document, from_page=page_num, to_page=page_num)
@@ -57,21 +52,3 @@ def compress_pdf(input_pdf, scale_percentage):
     output_pdf_stream.seek(0)
     
     return output_pdf_stream
-
-# Streamlit UI
-st.title("PDF Size Reducer")
-
-# Upload PDF file
-uploaded_file = st.file_uploader("Upload a PDF file", type="pdf")
-
-if uploaded_file:
-    # Scale input
-    scale = st.slider("Select image reduction percentage", min_value=10, max_value=100, value=50)
-    
-    if st.button("Reduce PDF Size"):
-        # Compress the PDF
-        output_pdf_stream = compress_pdf(uploaded_file, scale)
-        
-        # Create a download link for the compressed PDF
-        st.success("PDF size reduced successfully!")
-        st.download_button(label="Download Reduced PDF", data=output_pdf_stream, file_name="reduced_size.pdf", mime="application/pdf")

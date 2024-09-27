@@ -27,8 +27,8 @@ def compress_pdf(input_pdf, scale_percentage):
             base_image = pdf_document.extract_image(xref)
             img_bytes = base_image["image"]
             
-            # Create a Pixmap from the image bytes
-            img_pix = fitz.Pixmap(fitz.csRGB, fitz.open(io.BytesIO(img_bytes)), 0)
+            # Create a Pixmap directly from the image bytes
+            img_pix = fitz.Pixmap(img_bytes)
             
             # Resize the image based on the scale_percentage
             scaled_pix = img_pix.scale(scale_percentage / 100, scale_percentage / 100)

@@ -1,32 +1,31 @@
 import streamlit as st
-from PyPDF2 import PdfReader, PdfWriter
-from pdf2image import convert_from_bytes
-from PIL import Image
+import fitz  # PyMuPDF
 import io
 
-# Function to resize PDF pages
-def resize_pdf(input_pdf, scale_percentage):
-    # Read the input PDF
-    pdf_reader = PdfReader(input_pdf)
+def compress_pdf(input_pdf, scale_percentage):
+    # Load the PDF
+    pdf_document = fitz.open(stream=input_pdf.read(), filetype="pdf")
     
-    # Convert PDF pages to images
-    images = convert_from_bytes(input_pdf.read())
-
-    # List to store resized images
-    resized_images = []
-
-    # Resize each image based on the scale percentage
-    for image in images:
-        width, height = image.size
-        new_width = int(width * scale_percentage / 100)
-        new_height = int(height * scale_percentage / 100)
-        resized_image = image.resize((new_width, new_height), Image.ANTIALIAS)
-        resized_images.append(resized_image)
-
-    # Convert the resized images back to PDF
+    # Output PDF
     output_pdf_stream = io.BytesIO()
-    resized_images[0].save(output_pdf_stream, save_all=True, append_images=resized_images[1:], format='PDF')
+    
+    # Write the new PDF to the output stream
+    writer = fitz.Document()
 
+    # Loop through each page and compress
+    for page_num in range(len(pdf_document)):
+        page = pdf_document.load_page(page_num)
+        pix = page.get_pixmap(matrix=fitz.Matrix(scale_percentage / 100, scale_percentage / 100))  # Resize page
+        img_bytes = pix.tobytes(output="png")
+        
+        # Create a new page in the writer object from the image
+        img_pdf = fitz.open(stream=img_bytes, filetype="png")
+        writer.insert_pdf(img_pdf)
+    
+    # Save the compressed PDF
+    writer.save(output_pdf_stream)
+    writer.close()
+    
     return output_pdf_stream
 
 # Streamlit UI
@@ -40,9 +39,9 @@ if uploaded_file:
     scale = st.slider("Select size reduction percentage", min_value=10, max_value=100, value=50)
     
     if st.button("Reduce PDF Size"):
-        # Resize the PDF
-        output_pdf_stream = resize_pdf(uploaded_file, scale)
+        # Compress the PDF
+        output_pdf_stream = compress_pdf(uploaded_file, scale)
         
-        # Create a download link for the reduced PDF
+        # Create a download link for the compressed PDF
         st.success("PDF size reduced successfully!")
-        st.download_button(label="Download Reduced PDF", data=output_pdf_stream, file_name="reduced_size.pdf", mime="application/pdf")
+        st.download_button(label="Download Reduced PDF", data=output_pdf_stream.getvalue(), file_name="reduced_size.pdf", mime="application/pdf")

@@ -1,71 +1,37 @@
 import streamlit as st
-import fitz  # PyMuPDF
+from pdf2image import convert_from_bytes
+from PIL import Image
 import io
 
-def compress_pdf(input_pdf, scale_percentage):
-    # Convert Streamlit UploadedFile to BytesIO
-    input_pdf_stream = io.BytesIO(input_pdf.read())  # Convert to BytesIO
-    input_pdf_stream.seek(0)  # Move to the start of the file stream
-    
-    # Load the PDF from the input stream
-    pdf_document = fitz.open(stream=input_pdf_stream, filetype="pdf")
-    
-    # Output PDF stream
-    output_pdf_stream = io.BytesIO()
-    
-    # Create a new PDF writer object
-    writer = fitz.open()
+# Function to reduce PDF file size
+def reduce_pdf_file_size(pdf_bytes, downsizing_percentage):
+  # Convert PDF to images
+  images = convert_from_bytes(pdf_bytes)
 
-    # Loop through each page in the PDF
-    for page_num in range(len(pdf_document)):
-        page = pdf_document.load_page(page_num)
-        
-        # Extract the images and compress them
-        img_list = page.get_images(full=True)
-        for img_index, img in enumerate(img_list):
-            xref = img[0]
-            base_image = pdf_document.extract_image(xref)
-            img_bytes = base_image["image"]
-            
-            # Create a Pixmap directly from the image bytes
-            img_pix = fitz.Pixmap(img_bytes)
-            
-            # Create a scaling matrix
-            scale_matrix = fitz.Matrix(scale_percentage / 100, scale_percentage / 100)
-            
-            # Scale the pixmap using the matrix to create a new scaled pixmap
-            scaled_pix = fitz.Pixmap(img_pix, img_pix.alpha)  # Retain alpha channel if exists
-            scaled_pix = scaled_pix.resample(scale_matrix)  # Resample the image with the scale matrix
+  # Resize images
+  resized_images = []
+  for image in images:
+      width, height = image.size
+      new_width = int(width * (1 - downsizing_percentage / 100))
+      new_height = int(height * (1 - downsizing_percentage / 100))
+      resized_image = image.resize((new_width, new_height))
+      resized_images.append(resized_image)
 
-            # Replace the image in the PDF
-            page.replace_image(xref, scaled_pix)
-        
-        # Add the updated page to the new writer
-        writer.insert_pdf(pdf_document, from_page=page_num, to_page=page_num)
-    
-    # Save the compressed PDF to the output stream
-    writer.save(output_pdf_stream)
-    writer.close()
-    
-    # Move the output stream to the start
-    output_pdf_stream.seek(0)
-    
-    return output_pdf_stream
+  # Convert resized images back to a PDF
+  pdf_buffer = io.BytesIO()
+  images[0].save(pdf_buffer, "PDF", resolution=100.0, save_all=True, append_images=images[1:])
+  pdf_buffer.seek(0)
 
-# Streamlit UI
-st.title("PDF Size Reducer")
+  return pdf_buffer.read()
 
-# Upload PDF file
-uploaded_file = st.file_uploader("Upload a PDF file", type="pdf")
+# Streamlit app
+st.title("PDF File Size Reducer")
 
-if uploaded_file:
-    # Scale input
-    scale = st.slider("Select image reduction percentage", min_value=10, max_value=100, value=50)
-    
-    if st.button("Reduce PDF Size"):
-        # Compress the PDF
-        output_pdf_stream = compress_pdf(uploaded_file, scale)
-        
-        # Create a download link for the compressed PDF
-        st.success("PDF size reduced successfully!")
-        st.download_button(label="Download Reduced PDF", data=output_pdf_stream, file_name="reduced_size.pdf", mime="application/pdf")
+downsizing_percentage = st.number_input("Enter the downsizing percentage (1-100):", min_value=1, max_value=100)
+
+uploaded_file = st.file_uploader("Choose a PDF file:", type=["pdf"])
+
+if uploaded_file is not None:
+  pdf_bytes = uploaded_file.read()
+  reduced_pdf_bytes = reduce_pdf_file_size(pdf_bytes, downsizing_percentage)
+  st.download_button("Download reduced PDF", reduced_pdf_bytes, "reduced_pdf.pdf")

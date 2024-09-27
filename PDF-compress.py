@@ -1,6 +1,7 @@
 import streamlit as st
 import fitz  # PyMuPDF
 import io
+from PIL import Image
 
 def compress_pdf(input_pdf, scale_percentage):
     # Convert Streamlit UploadedFile to BytesIO
@@ -27,21 +28,23 @@ def compress_pdf(input_pdf, scale_percentage):
             base_image = pdf_document.extract_image(xref)
             img_bytes = base_image["image"]
             
-            # Create a Pixmap directly from the image bytes
-            img_pix = fitz.Pixmap(img_bytes)
+            # Create a Pillow image from the extracted image bytes
+            img = Image.open(io.BytesIO(img_bytes))
             
             # Calculate new dimensions
-            new_width = int(img_pix.width * (scale_percentage / 100))
-            new_height = int(img_pix.height * (scale_percentage / 100))
+            new_width = int(img.width * (scale_percentage / 100))
+            new_height = int(img.height * (scale_percentage / 100))
             
-            # Create a new scaled Pixmap
-            scaled_pix = fitz.Pixmap(fitz.csRGB, new_width, new_height)  # Create a new Pixmap
+            # Resize the image using Pillow
+            img = img.resize((new_width, new_height), Image.ANTIALIAS)
             
-            # Copy the original image into the new scaled Pixmap
-            img_pix = img_pix.resize(new_width, new_height)  # This will throw error
-
+            # Convert back to BytesIO
+            img_bytes_io = io.BytesIO()
+            img.save(img_bytes_io, format='PNG')  # Save as PNG or JPEG
+            img_bytes_io.seek(0)  # Move to the start of the BytesIO
+            
             # Replace the image in the PDF
-            page.replace_image(xref, scaled_pix)
+            page.replace_image(xref, img_bytes_io.getvalue())
         
         # Add the updated page to the new writer
         writer.insert_pdf(pdf_document, from_page=page_num, to_page=page_num)

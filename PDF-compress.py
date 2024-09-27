@@ -34,9 +34,12 @@ def compress_pdf(input_pdf, scale_percentage):
             new_width = int(img_pix.width * (scale_percentage / 100))
             new_height = int(img_pix.height * (scale_percentage / 100))
             
-            # Resize the image using the new dimensions
-            scaled_pix = img_pix.resize(new_width, new_height)  # Resize the pixmap
+            # Create a new scaled Pixmap
+            scaled_pix = fitz.Pixmap(fitz.csRGB, new_width, new_height)  # Create a new Pixmap
             
+            # Copy the original image into the new scaled Pixmap
+            img_pix = img_pix.resize(new_width, new_height)  # This will throw error
+
             # Replace the image in the PDF
             page.replace_image(xref, scaled_pix)
         
